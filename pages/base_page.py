@@ -236,6 +236,37 @@ class BasePage:
         'Sanskruthi School - Nalgonda' row and the header echoing it)."""
         return self.click_text(text, exact=exact, role="button", timeout=timeout)
 
+    def click_menu_item(self, index: int, timeout: int | None = None):
+        """Click the nth row of an open Material dropdown menu, counting from 0.
+
+        Positional because there is nothing else to go on: Flutter publishes the
+        menu as `role="menu"` over `role="menuitem"` rows, and on this build the
+        rows carry **no text at all** in the accessibility tree - a
+        `DropdownMenuItem`'s child label never reaches the DOM. Every text-based
+        locator is therefore guaranteed to miss, and the rows come out in the
+        order the widget declares them.
+
+        The chosen value *is* readable once the menu closes, so callers should
+        confirm the selection by its label rather than trusting the index."""
+        timeout = settings.DEFAULT_TIMEOUT if timeout is None else timeout
+
+        def attempt():
+            rows = [
+                e
+                for e in self.driver.find_elements(
+                    By.CSS_SELECTOR, 'flt-semantics[role="menuitem"]'
+                )
+                if e.is_displayed()
+            ]
+            if len(rows) <= index:
+                return None
+            self._click_element(rows[index])
+            return rows[index]
+
+        return self._poll(
+            attempt, timeout, f"no dropdown menu row at index {index}"
+        )
+
     # -- typing ---------------------------------------------------------------
 
     def find_input(self, label: str, timeout: int | None = None):
