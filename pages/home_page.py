@@ -92,20 +92,54 @@ class HomePage(BasePage):
 
     # -- theme toggle (web only) ---------------------------------------------
 
-    def toggle_theme(self):
-        """Flip light/dark. The button's own label names the *target* theme, so
-        it reads 'Switch to dark mode' while the portal is light."""
-        target = (
-            Text.DARK_MODE_TOGGLE
-            if self.is_visible(Text.DARK_MODE_TOGGLE, timeout=5)
-            else Text.LIGHT_MODE_TOGGLE
-        )
+    def _theme_label(self) -> str | None:
+        """The theme the toggle currently implies, or None if it is not on
+        screen at all. One pass over the semantics tree, no waiting.
+
+        Matched on the *button* node specifically. The toggle is an IconButton
+        whose tooltip is its accessible name, and hovering it - which a Selenium
+        click does, and then leaves the pointer parked there - publishes a
+        second semantics node carrying that same wording. The two relabel on
+        their own schedules, so a plain text match can read the tooltip's stale
+        copy of the old label while the button already shows the new one, and
+        report a theme change that has in fact happened as not having
+        happened."""
+        for label, theme in (
+            (Text.DARK_MODE_TOGGLE, "light"),
+            (Text.LIGHT_MODE_TOGGLE, "dark"),
+        ):
+            if self._visible_elements(self.node_xpath(label, role="button")):
+                return theme
+        return None
+
+    def toggle_theme(self, timeout: int = 30):
+        """Flip light/dark and wait for the toggle to relabel itself.
+
+        The button's own label names the *target* theme, so it reads 'Switch to
+        dark mode' while the portal is light. Waiting for that label to turn
+        over is what makes the flip observable: the tap and the rebuild are
+        separate frames, so returning the moment the click lands hands the
+        caller the theme it was on before."""
+        before = self.current_theme()
+        target = Text.DARK_MODE_TOGGLE if before == "light" else Text.LIGHT_MODE_TOGGLE
         self.click_button(target)
+        self._poll(
+            lambda: self._theme_label() not in (None, before),
+            timeout,
+            f"toggle still reports the portal as {before!r} after tapping {target!r}",
+        )
         return self
 
-    def current_theme(self) -> str:
-        """'light' or 'dark', read off which way the toggle offers to switch."""
-        return "light" if self.is_visible(Text.DARK_MODE_TOGGLE, timeout=5) else "dark"
+    def current_theme(self, timeout: int = 15) -> str:
+        """'light' or 'dark', read off which way the toggle offers to switch.
+
+        Waits for the toggle to actually be on screen: with neither label
+        present - mid-rebuild, or while a section is still painting - a bare
+        visibility check reports 'dark' for a portal that has no theme toggle
+        up yet."""
+        return self._poll(
+            self._theme_label, timeout, "neither theme toggle label was on screen"
+        )
 
     # -- drawer ---------------------------------------------------------------
 
