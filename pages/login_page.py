@@ -7,8 +7,10 @@ replaces the login screen with the teacher shell (home).
 from __future__ import annotations
 
 import re
+import time
 
 from data.test_data import (
+    LANGUAGE_ORDER,
     LICENSE_CODE,
     SCHOOL_NAME,
     SCHOOL_SEARCH,
@@ -97,13 +99,47 @@ class LoginPage(BasePage):
         self.click_login()
 
         home = HomePage(self.driver)
-        if home.is_loaded(timeout=30):
+        if self._login_reached_home(home):
             return home
 
-        # Login did not reach home (number not enrolled) -> register it. The
-        # school is already selected and the mobile already typed.
+        # The request came back and left us on the login screen: the number is
+        # not enrolled. School and mobile are already filled in.
         self.register(mobile, name, language, license_code, mobile_already_entered=True)
         return home.wait_loaded()
+
+    def _login_reached_home(self, home: HomePage, timeout: int = 120) -> bool:
+        """Wait out the LOG IN request. True once the shell is up.
+
+        False means the request genuinely came back without navigating, which is
+        what an unenrolled number looks like - never merely that a deadline
+        passed. The difference matters because the caller answers a False by
+        enrolling a teacher for real, and login is slower than it looks: it
+        chains login -> me -> school before it swaps the shell in, so on a
+        loaded CI runner a fixed budget expires mid-request and sends the suite
+        into a registration it was never asked to do.
+
+        The signal is the button's own: LOG IN swaps its label for a spinner
+        while the request is out, so the label being back is the request
+        reporting itself finished. It has to stay back across consecutive polls
+        - the label is still up for the frame between the click and the
+        spinner."""
+        end = time.monotonic() + timeout
+        settled = 0
+        while time.monotonic() < end:
+            if home.is_loaded(timeout=1):
+                return True
+            if self.is_visible(Text.LOGIN_BUTTON, timeout=1):
+                settled += 1
+                if settled >= 3:
+                    return False
+            else:
+                settled = 0  # spinner up, request still in flight
+            time.sleep(0.5)
+        raise TimeoutError(
+            f"LOG IN neither reached the teacher shell nor came back within "
+            f"{timeout}s - the portal is not responding, so the suite is not "
+            "going to guess at registering instead"
+        )
 
     def register(
         self,
@@ -131,7 +167,16 @@ class LoginPage(BasePage):
         self.find_text(Text.REGISTER_TITLE, timeout=30)
         self._type_first_visible_input(name)
         self.click_button(Text.SELECT_LANGUAGE_HINT)
-        self.click_button(language, timeout=25)
+        # Positional, not by label: the open menu's rows carry no text at all
+        # (see BasePage.click_menu_item). The field does show the chosen
+        # language once the menu closes, so the pick is verified there.
+        self.click_menu_item(LANGUAGE_ORDER.index(language), timeout=25)
+        if not self.is_visible(language, timeout=20):
+            raise AssertionError(
+                f"picked language row {LANGUAGE_ORDER.index(language)} but the "
+                f"field does not show {language!r} - LANGUAGE_ORDER is out of "
+                "step with the app's dropdown"
+            )
         self.click_button(Text.REGISTER_SUBMIT)
         return HomePage(self.driver).wait_loaded()
 
