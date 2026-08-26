@@ -1,0 +1,51 @@
+name: CI
+
+# Smoke-only gate for pushes and PRs. The full suite belongs to the daily run:
+# every test drives the live portal, so a full pass costs real minutes and there
+# is nothing to gain from paying that on every commit.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint-ish sanity check
+        # Catches an import typo or a syntax error in seconds, before spending
+        # minutes booting browsers to discover the same thing.
+        run: |
+          python -m compileall -q config data pages tests utils conftest.py run_daily.py
+          python -c "import sys; sys.path.insert(0, '.'); import conftest; from pages.login_page import LoginPage; print('imports OK')"
+
+      - name: Show browser under test
+        run: google-chrome --version
+
+      - name: Smoke tests
+        env:
+          HEADLESS: "true"
+        run: python -m pytest -m smoke -v
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-reports
+          path: reports/
+          retention-days: 7

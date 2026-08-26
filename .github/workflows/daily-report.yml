@@ -1,0 +1,55 @@
+name: Daily QA report
+
+# The web suite needs no device and no Appium server - just a browser - so it
+# runs on a GitHub-hosted runner. That is the whole reason this can live in CI
+# while the Android suite needs a self-hosted machine with a phone attached.
+
+on:
+  schedule:
+    # 08:00 IST = 02:30 UTC. Kept before 09:00 IST so the report is waiting in
+    # Slack at the start of the day.
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "pytest args (blank = whole suite, e.g. -m smoke)"
+        required: false
+        default: ""
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Show browser under test
+        # Selenium Manager resolves the driver itself; this only records which
+        # Chrome the run used, so a failure can be tied to a browser version.
+        run: google-chrome --version
+
+      - name: Run QA pass and post to Slack
+        env:
+          # Set this in Settings -> Secrets and variables -> Actions. Without it
+          # the run still happens and the report prints to the job log instead of
+          # posting - it does not fail.
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          HEADLESS: "true"
+        run: python run_daily.py ${{ inputs.scope }}
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-reports
+          path: reports/
+          retention-days: 14
