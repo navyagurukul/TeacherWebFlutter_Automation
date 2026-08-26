@@ -20,6 +20,27 @@ TEACHER_MOBILE = "9000000001"
 TEACHER_NAME = "QA Automation"
 TEACHER_LANGUAGE = "English"
 
+# The language dropdown in the order the app declares it. Positions matter:
+# Flutter publishes the open menu's rows without any text, so the register flow
+# picks a language by index and then confirms it by the label the field shows
+# once the menu has closed.
+LANGUAGE_ORDER = [
+    "Hindi",
+    "English",
+    "Marathi",
+    "Tamil",
+    "Telugu",
+    "Kannada",
+    "Malayalam",
+    "Bengali",
+    "Gujarati",
+    "Punjabi",
+    "Odia",
+    "Urdu",
+    "Assamese",
+    "Sanskrit",
+]
+
 # License code for Sanskruthi School - Nalgonda (used by the REGISTER flow).
 LICENSE_CODE = "SANK48"
 

@@ -106,6 +106,30 @@ Unlike the Android runner there is nothing to skip for — no device, no Appium
 server, just a browser. If the browser cannot start, that is a real failure and
 is reported as one.
 
+## Running in CI
+
+Because the suite needs only a browser, it runs on ordinary GitHub-hosted
+runners — no self-hosted machine and no phone attached, which is what the
+Android suite requires.
+
+| Workflow                            | When                                   | Scope                     |
+| ----------------------------------- | -------------------------------------- | ------------------------- |
+| `.github/workflows/ci.yml`          | push / PR to `main`, or manually       | `-m smoke` + `-m regression` (parallel jobs) |
+| `.github/workflows/daily-report.yml`| 02:30 UTC = **08:00 IST**, or manually | full suite + Slack report |
+
+Both can be started by hand from the repo's **Actions** tab, and both upload
+`reports/` as a build artifact so a failure can be read after the fact.
+
+**One-time setup for the Slack report:** add the webhook under
+*Settings → Secrets and variables → Actions → New repository secret*, named
+`SLACK_WEBHOOK_URL`. Without it nothing breaks — the run still happens and the
+report prints to the job log instead of posting.
+
+> If you also keep the local Windows Task Scheduler job (`TeacherWeb QA Daily`,
+> which runs `run_daily.ps1`), both it and the daily workflow will post to Slack
+> each morning. Pick one: the workflow runs whether or not the laptop is on,
+> while the scheduled task can reach things a hosted runner cannot.
+
 ---
 
 ## Layout
@@ -126,6 +150,8 @@ pages/
 data/test_data.py      Sanskruthi account + all portal copy
 tests/                 one module per area
 run_daily.py           scheduled run + Slack summary
+run_daily.ps1          wrapper the Windows scheduled task calls
+.github/workflows/     smoke on push/PR, full suite daily at 08:00 IST
 ```
 
 ## Test data

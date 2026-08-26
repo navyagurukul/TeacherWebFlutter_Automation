@@ -1,8 +1,13 @@
 name: CI
 
-# Smoke-only gate for pushes and PRs. The full suite belongs to the daily run:
-# every test drives the live portal, so a full pass costs real minutes and there
-# is nothing to gain from paying that on every commit.
+# Gate for pushes and PRs: smoke and regression, which between them are every
+# test in the suite (the two markers do not overlap). They run as separate jobs
+# on separate runners rather than one `pytest` call, so the two report
+# independently - a smoke break and a regression break are different news - and
+# neither waits on the other.
+#
+# The daily workflow still runs the whole suite in one session and posts the
+# Slack summary; this one only answers "did this change break anything".
 
 on:
   push:
@@ -12,9 +17,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  smoke:
+  tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
+    strategy:
+      # Report both. Without this a smoke failure cancels the regression run
+      # still in flight, which hides half the answer on exactly the commits
+      # where both halves are worth having.
+      fail-fast: false
+      matrix:
+        suite: [smoke, regression]
+
+    name: ${{ matrix.suite }}
 
     steps:
       - uses: actions/checkout@v4
@@ -37,15 +52,15 @@ jobs:
       - name: Show browser under test
         run: google-chrome --version
 
-      - name: Smoke tests
+      - name: ${{ matrix.suite }} tests
         env:
           HEADLESS: "true"
-        run: python -m pytest -m smoke -v
+        run: python -m pytest -m ${{ matrix.suite }} -v
 
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: smoke-reports
+          name: ${{ matrix.suite }}-reports
           path: reports/
           retention-days: 7
