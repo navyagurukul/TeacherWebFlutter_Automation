@@ -11,8 +11,8 @@ from __future__ import annotations
 
 # The one school every test logs into. SCHOOL_SEARCH is what we type into the
 # picker's search box; SCHOOL_NAME is the exact list row we click.
-SCHOOL_SEARCH = "Sanskruthi"
-SCHOOL_NAME = "Sanskruthi School - Nalgonda"
+SCHOOL_SEARCH = "Samskruthi"
+SCHOOL_NAME = "Samskruthi School - IMS School - Nalgonda"
 
 # Teacher used for login. This number is already enrolled at Sanskruthi; the
 # login-or-register flow enrols it via the license code below if that changes.
