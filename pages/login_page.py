@@ -160,12 +160,12 @@ class LoginPage(BasePage):
 
         # License dialog.
         self.find_text(Text.LICENSE_TITLE, timeout=25)
-        self._type_first_visible_input(license_code)
+        self.type_first_visible_input(license_code)
         self.click_button(Text.LICENSE_CONTINUE)
 
         # "Create your account" screen.
         self.find_text(Text.REGISTER_TITLE, timeout=30)
-        self._type_first_visible_input(name)
+        self.type_first_visible_input(name)
         self.click_button(Text.SELECT_LANGUAGE_HINT)
         # Positional, not by label: the open menu's rows carry no text at all
         # (see BasePage.click_menu_item). The field does show the chosen
@@ -179,27 +179,6 @@ class LoginPage(BasePage):
             )
         self.click_button(Text.REGISTER_SUBMIT)
         return HomePage(self.driver).wait_loaded()
-
-    def _type_first_visible_input(self, value: str) -> None:
-        """Type into whichever field the current dialog/screen just focused.
-
-        Dialog fields do not always carry a stable aria-label, so this targets
-        the one input Flutter has on screen at that moment."""
-        from selenium.webdriver.common.by import By
-
-        def attempt():
-            fields = [
-                e
-                for e in self.driver.find_elements(By.CSS_SELECTOR, "input, textarea")
-                if e.is_displayed()
-            ]
-            if not fields:
-                return None
-            fields[0].click()
-            fields[0].send_keys(value)
-            return True
-
-        self._poll(attempt, 20, "no text field to type into")
 
     # -- app version ----------------------------------------------------------
 

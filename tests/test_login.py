@@ -32,6 +32,18 @@ def test_login_shows_app_version(driver):
     assert login.version_number(), f"footer carried no version number: {label!r}"
     app_version.capture(label)
 
+    # Cross-check the footer against the version the deployed site reports for
+    # itself. Two sources for one fact are only worth having if something
+    # compares them: a stale CDN bundle or a run pointed at the wrong
+    # environment looks exactly like a normal pass until these two disagree.
+    deployed = app_version.deployed_version()
+    if deployed is None:
+        pytest.skip("version.json unreachable - cannot cross-check the footer")
+    assert login.version_number() == deployed, (
+        f"login screen shows {login.version_number()} but {app_version.VERSION_JSON} "
+        f"reports {deployed} - the suite may be testing a different build than it names"
+    )
+
 
 @pytest.mark.smoke
 @pytest.mark.login
