@@ -100,6 +100,13 @@ class EgApi:
 
     # -- lesson-plan data -----------------------------------------------------
 
+    def school_summary(self, school_id: str) -> dict:
+        """The school detail the home dashboard's summary card is built from —
+        `total_strength` and `total_registered_students`. Lets the daily report
+        name the enrolment even when no browser run captured it."""
+        data = self._data(self._get(f"schools/{school_id}/", module="management"))
+        return data if isinstance(data, dict) else {}
+
     def classes(self, school_id: str) -> list:
         data = self._data(self._get(f"schools/{school_id}/classes/", module="management"))
         return data if isinstance(data, list) else []
