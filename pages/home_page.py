@@ -7,6 +7,9 @@ no counterpart for.
 """
 from __future__ import annotations
 
+import time
+import re
+
 from data.test_data import Text
 from pages.base_page import BasePage
 
@@ -26,6 +29,69 @@ BOX_TO_TITLE = {
     Text.BOX_STUDENT_REPORT: Text.TITLE_STUDENT_REPORT,
     Text.BOX_MANAGEMENT: Text.TITLE_MANAGEMENT,
 }
+
+_INT = re.compile(r"^\d+$")
+
+
+def _legend_counts(values: list[str], labels: list[str]) -> dict[str, int]:
+    """Map each summary-legend label to its count.
+
+    The portal lays this legend out as a label column beside a value column, so
+    the semantics nodes arrive grouped rather than interleaved::
+
+        'Registered:', 'Remaining:', '256', '92'
+
+    Reading "the first number after the label" therefore hands every label the
+    same first value. Pair by ordinal position instead: the k-th label takes the
+    k-th number of the block that follows. The interleaved layout is still
+    supported and is detected by a number appearing between two labels.
+
+    Labels are matched exactly ("Remaining", "Remaining:") so a 'Registered
+    Mobile' label elsewhere can never be mistaken for the dashboard's
+    'Registered'.
+    """
+    hits = []
+    for label in labels:
+        pattern = re.compile(rf"^{re.escape(label)}\s*:?\s*(\d+)?$", re.IGNORECASE)
+        for i, value in enumerate(values):
+            m = pattern.match(value)
+            if m:
+                hits.append((i, label, int(m.group(1)) if m.group(1) else None))
+                break
+        else:
+            return {}
+
+    hits.sort()
+    counts = {label: inline for _, label, inline in hits if inline is not None}
+    pending = [(i, label) for i, label, inline in hits if inline is None]
+    if not pending:
+        return counts
+
+    first, last = hits[0][0], hits[-1][0]
+    interleaved = any(_INT.match(v) for v in values[first:last + 1])
+    if interleaved:
+        for i, label in pending:
+            for nxt in values[i + 1:i + 4]:
+                if _INT.match(nxt):
+                    counts[label] = int(nxt)
+                    break
+    else:
+        numbers = [int(v) for v in values[last + 1:] if _INT.match(v)]
+        for (_, label), number in zip(pending, numbers):
+            counts[label] = number
+    return counts
+
+
+def _total_for(values: list[str]) -> int | None:
+    """Total strength if the donut centre is exposed. The web semantics tree
+    usually omits it (the donut is painted into the canvas), in which case the
+    caller derives the total from registered + remaining."""
+    for value in values:
+        m = re.search(r"\bof\s+(\d+)\b", value, re.IGNORECASE)
+        if m:
+            return int(m.group(1))
+    return None
+
 
 # Error states a healthy section must not be showing.
 ERROR_STATES = (Text.GENERIC_ERROR, Text.NO_INTERNET)
@@ -89,6 +155,65 @@ class HomePage(BasePage):
             return (self.find_text(Text.VERSION_PREFIX, exact=False, timeout=10).text or "").strip() or None
         except TimeoutError:
             return None
+
+
+    # -- school summary card --------------------------------------------------
+
+    def _text_nodes(self) -> list[str]:
+        """Every semantics label on screen in tree order, duplicates kept.
+
+        Deliberately not `visible_texts()`: that one de-duplicates through a JS
+        Set, so when Registered and Remaining happen to hold the same number one
+        of the two value nodes disappears and the legend pairs up wrongly. Order
+        and repetition are exactly what the pairing depends on.
+        """
+        return self.driver.execute_script(
+            """
+            const host = document.querySelector('flt-semantics-host');
+            if (!host) return [];
+            const out = [];
+            host.querySelectorAll('flt-semantics').forEach(e => {
+              const span = e.querySelector(':scope > span');
+              let t = (span ? span.textContent : '').trim();
+              if (!t && e.getAttribute('role') === 'button') {
+                const b = (e.textContent || '').trim();
+                if (b && b.length < 120) t = b;
+              }
+              if (t) out.push(t);
+            });
+            return out;
+            """
+        )
+
+    def enrolment_counts(self, timeout: int = 25) -> dict | None:
+        """Registered / Remaining student counts from the home dashboard's
+        school-summary card, e.g. `{"registered": 256, "remaining": 92,
+        "total": 348}`.
+
+        The card is API-backed, so this waits for the legend to paint. The web
+        build paints the donut into the canvas rather than the semantics tree,
+        so `total` is normally derived as registered + remaining; if a written
+        "of <n>" is present it is preferred. Returns None if the card never
+        painted.
+        """
+        deadline = time.monotonic() + timeout
+        while True:
+            values = self._text_nodes()
+            counts = _legend_counts(
+                values, [Text.LEGEND_REGISTERED, Text.LEGEND_REMAINING]
+            )
+            registered = counts.get(Text.LEGEND_REGISTERED)
+            remaining = counts.get(Text.LEGEND_REMAINING)
+            if registered is not None and remaining is not None:
+                total = _total_for(values)
+                return {
+                    "registered": registered,
+                    "remaining": remaining,
+                    "total": total if total is not None else registered + remaining,
+                }
+            if time.monotonic() >= deadline:
+                return None
+            time.sleep(1)
 
     # -- theme toggle (web only) ---------------------------------------------
 

@@ -119,6 +119,12 @@ class Text:
     DARK_MODE_TOGGLE = "Switch to dark mode"
     LIGHT_MODE_TOGGLE = "Switch to light mode"
     COPY_LICENSE = "Copy license code"
+    # School-summary card on the home dashboard. The legend renders as a
+    # label column beside a value column ("Registered:", "Remaining:", then
+    # "256", "92"), so the counts are paired by position, not adjacency.
+    LEGEND_REGISTERED = "Registered"
+    LEGEND_REMAINING = "Remaining"
+
     LICENSE_CODE_LABEL = "STUDENT LICENSE CODE"
 
     # -- section content ------------------------------------------------------
