@@ -297,6 +297,27 @@ class BasePage:
         field.send_keys(value)
         return field
 
+    def type_first_visible_input(self, value: str, timeout: int = 20):
+        """Type into whichever field the current dialog/screen just focused.
+
+        Dialog fields do not always carry a stable aria-label, so this targets
+        the one input Flutter has on screen at that moment. Prefer
+        `type_into()` wherever the field does have a hint to match on."""
+
+        def attempt():
+            fields = [
+                e
+                for e in self.driver.find_elements(By.CSS_SELECTOR, "input, textarea")
+                if e.is_displayed()
+            ]
+            if not fields:
+                return None
+            fields[0].click()
+            fields[0].send_keys(value)
+            return True
+
+        return self._poll(attempt, timeout, "no text field to type into")
+
     def input_value(self, label: str) -> str:
         return self.find_input(label).get_attribute("value") or ""
 
