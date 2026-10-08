@@ -99,7 +99,10 @@ jobs:
                "$BASE_URL"
 
       - name: ${{ matrix.suite }} tests
-        run: python -m pytest -m ${{ matrix.suite }} -v
+        # One retry absorbs a slow first paint on the shared runner (the portal
+        # boots the Flutter engine before anything is clickable), matching the
+        # tiered workflow; a real break fails both attempts.
+        run: python -m pytest -m ${{ matrix.suite }} -v --reruns 1 --reruns-delay 5
 
       - name: Upload reports
         if: always()
