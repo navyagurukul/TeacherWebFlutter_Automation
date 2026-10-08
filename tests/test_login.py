@@ -1,7 +1,13 @@
 """Login flow tests for the web portal. All logins use the Sanskruthi school."""
 import pytest
 
-from data.test_data import INVALID_MOBILE_SHORT, SCHOOL_NAME, TEACHER_MOBILE, Text
+from data.test_data import (
+    INVALID_MOBILE_SHORT,
+    SCHOOL_NAME,
+    SCHOOL_SEARCH,
+    TEACHER_MOBILE,
+    Text,
+)
 from pages.login_page import LoginPage
 from utils import app_version
 
@@ -52,9 +58,9 @@ def test_login_shows_app_version(driver):
 def test_school_picker_finds_sanskruthi(driver):
     login = LoginPage(driver)
     login.click_button(Text.SELECT_SCHOOL_HINT)
-    login.type_into(Text.SEARCH_SCHOOL_FIELD, "Sanskruthi")
+    login.type_into(Text.SEARCH_SCHOOL_FIELD, SCHOOL_SEARCH)
     assert login.is_visible(SCHOOL_NAME, timeout=20), (
-        f"Searching 'Sanskruthi' did not list {SCHOOL_NAME!r}"
+        f"Searching {SCHOOL_SEARCH!r} did not list {SCHOOL_NAME!r}"
     )
 
 

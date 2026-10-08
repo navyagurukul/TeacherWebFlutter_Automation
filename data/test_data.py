@@ -131,6 +131,8 @@ class Text:
     # Lesson Plan: a class picker plus a "<n> LESSON PLANS" count.
     LESSON_PLANS_SUFFIX = "LESSON PLANS"
     LESSON_START = "START"
+    # v2.5: a completed assessment row offers RESTART instead of START.
+    LESSON_RESTART = "RESTART"
 
     # Class / Student Report filters.
     FILTER_BY_CATEGORY = "FILTER BY CATEGORY"
