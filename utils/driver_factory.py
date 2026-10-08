@@ -40,9 +40,16 @@ p.click();
 return 'clicked';
 """
 
+# Ready means the tree *describes something*: a node with a role, a label or
+# text. Since v2.5.2 an enable during the splash can leave only empty container
+# nodes (three full-width <flt-semantics> with nothing in them) until Flutter
+# paints another frame, and counting nodes alone mistook that for a live tree.
 _SEMANTICS_READY_JS = f"""
 const host = document.querySelector({SEMANTICS_HOST!r});
-return !!host && host.querySelectorAll('flt-semantics').length > 0;
+if (!host) return false;
+return [...host.querySelectorAll('flt-semantics')].some(e =>
+  e.getAttribute('role') || e.getAttribute('aria-label') ||
+  (e.textContent || '').trim());
 """
 
 # Flutter mounts <flutter-view>, then renders the scene *inside the shadow root*
@@ -133,12 +140,26 @@ def enable_semantics(driver, timeout: int | None = None) -> None:
             if semantics_ready(driver):
                 return
             time.sleep(0.3)
+        # Still empty: the tree can sit stuck on bare containers until the next
+        # frame (see _SEMANTICS_READY_JS). A 1px resize and back forces one.
+        _nudge_frame(driver)
 
     raise TimeoutError(
         f"Flutter never built its semantics tree within {timeout}s - the suite "
         "cannot see the UI. Check that the page really loaded and that the build "
         f"still renders the '{SEMANTICS_PLACEHOLDER}' element."
     )
+
+
+def _nudge_frame(driver) -> None:
+    """Make Flutter paint a new frame by resizing the window 1px and back."""
+    try:
+        size = driver.get_window_size()
+        driver.set_window_size(size["width"] - 1, size["height"])
+        time.sleep(0.3)
+        driver.set_window_size(size["width"], size["height"])
+    except WebDriverException:
+        pass
 
 
 def open_app(driver, url: str | None = None) -> None:
