@@ -24,7 +24,10 @@ def test_management_home_lists_every_action(management):
 def test_student_registration_opens(management):
     # Opens the registration screen only - it does not submit, so no student is
     # created against the live school.
+    # Assert the new screen's title rather than the hub's absence: Flutter keeps
+    # the hub mounted beneath a pushed route, so its header can still be in the
+    # semantics tree on a slow runner even though the screen has changed.
     management.open_action(Text.MANAGE_REGISTRATION)
-    assert not management.is_visible(Text.MANAGEMENT_HEADER, timeout=10), (
-        "STUDENT REGISTRATION did not navigate away from the management hub"
+    assert management.is_visible(Text.REGISTER_STUDENT_TITLE, timeout=30), (
+        f"STUDENT REGISTRATION did not open the {Text.REGISTER_STUDENT_TITLE!r} screen"
     )
