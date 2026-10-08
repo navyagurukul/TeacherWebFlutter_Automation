@@ -12,6 +12,8 @@ Endpoints (see lib/services/*):
 """
 from __future__ import annotations
 
+import time
+
 import requests
 
 # Base URLs from lib/services/api/api_config.dart.
@@ -41,7 +43,17 @@ class EgApi:
         return h
 
     def _get(self, path: str, module: str = "backend") -> dict:
-        r = self.session.get(self._url(path, module), headers=self._headers(), timeout=self.timeout)
+        # The catalogue crawl makes hundreds of calls; the API answers bursts
+        # with 429. Back off (honouring Retry-After) instead of failing the run.
+        for attempt in range(6):
+            r = self.session.get(self._url(path, module), headers=self._headers(), timeout=self.timeout)
+            if r.status_code != 429 or attempt == 5:
+                break
+            try:
+                wait = float(r.headers.get("Retry-After", ""))
+            except ValueError:
+                wait = 5 * 2 ** attempt
+            time.sleep(min(wait, 120))
         r.raise_for_status()
         return r.json()
 

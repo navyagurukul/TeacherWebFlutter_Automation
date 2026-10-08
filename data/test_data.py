@@ -146,6 +146,9 @@ class Text:
     MANAGE_EDIT = "EDIT STUDENT"
     MANAGE_DELETE = "DELETE STUDENT"
     MANAGE_BULK = "STUDENT BULK REGISTRATION"
+    # Heading of the form STUDENT REGISTRATION opens (the app-bar title
+    # "Register Student" is not published to the web semantics tree).
+    REGISTER_STUDENT_TITLE = "REGISTRATION FORM"
 
     # Error / empty states worth asserting are absent on a healthy screen.
     GENERIC_ERROR = "Something went wrong"
