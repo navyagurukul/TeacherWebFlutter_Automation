@@ -12,10 +12,15 @@ name: Sanity / Smoke / Regression (web portal)
 #
 # Needs no device - just Chrome - so it runs on a GitHub-hosted runner (headless).
 
-# The DAILY run happens on the QA PC instead (run_tiers.py via the Windows task
-# "TeacherWeb QA Tiers"), so the Chrome window is visible while it tests. This
-# workflow is manual only: a headless run on GitHub's servers, on demand.
+# The DAILY run happens on the QA PC (run_tiers.py via the Windows task
+# "TeacherWeb QA Tiers", 08:45 IST) so the Chrome window is visible. This
+# workflow's schedule is the FALLBACK for days the PC is off: at 10:00 IST it
+# checks the LAST_TIER_RUN repo variable the PC writes when its run starts, and
+# runs the tiers headless only if the PC has not run today. Manual runs always
+# run. See utils/run_marker.py.
 on:
+  schedule:
+    - cron: "30 4 * * *" # 10:00 IST - fallback when the QA PC did not run
   workflow_dispatch:
     inputs:
       run_all_tiers:
@@ -44,7 +49,27 @@ env:
   RUN_ALL: ${{ inputs.run_all_tiers || 'false' }}
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        env:
+          LAST_TIER_RUN: ${{ vars.LAST_TIER_RUN }}
+        run: |
+          today=$(TZ=Asia/Kolkata date +%F)
+          echo "Today (IST): $today  |  LAST_TIER_RUN: ${LAST_TIER_RUN:-unset}"
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$LAST_TIER_RUN" = "$today pc" ]; then
+            echo "The QA PC already ran today's tiers with a visible browser - skipping the fallback."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   tiers:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
