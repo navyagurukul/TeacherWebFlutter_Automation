@@ -63,10 +63,12 @@ def home(login):
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_makereport(item, call):
-    """Capture a screenshot when a test fails, attached under reports/."""
+    """Capture a screenshot when a test fails, attached under reports/. Setup
+    failures count too: a login that hangs in the `home` fixture is exactly when
+    the page state is worth seeing."""
     outcome = yield
     report = outcome.get_result()
-    if report.when != "call" or not report.failed:
+    if report.when not in ("setup", "call") or not report.failed:
         return
     drv = item.funcargs.get("driver")
     if drv is None:
