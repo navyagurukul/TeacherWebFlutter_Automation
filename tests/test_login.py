@@ -6,6 +6,7 @@ from pages.login_page import LoginPage
 from utils import app_version
 
 
+@pytest.mark.sanity
 @pytest.mark.smoke
 @pytest.mark.login
 def test_login_screen_loads(driver):
@@ -16,6 +17,7 @@ def test_login_screen_loads(driver):
     assert login.is_visible(Text.SELECT_SCHOOL_HINT)
 
 
+@pytest.mark.sanity
 @pytest.mark.smoke
 @pytest.mark.login
 def test_login_shows_app_version(driver):
@@ -56,6 +58,7 @@ def test_school_picker_finds_sanskruthi(driver):
     )
 
 
+@pytest.mark.sanity
 @pytest.mark.smoke
 @pytest.mark.login
 def test_login_reaches_home(driver):

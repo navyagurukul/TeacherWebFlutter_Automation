@@ -16,6 +16,19 @@ from utils.driver_factory import create_driver, open_app
 settings.SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _record_browser(drv) -> None:
+    """Note the browser the run used (e.g. 'chrome 141.0.7390.54, headless'),
+    so the tier report can name it — the web suite's equivalent of a device."""
+    try:
+        caps = drv.capabilities
+        name = f"{caps.get('browserName', settings.BROWSER)} {caps.get('browserVersion', '')}".strip()
+        if settings.HEADLESS:
+            name += ", headless"
+        (settings.REPORTS_DIR / "browser.txt").write_text(name, encoding="utf-8")
+    except Exception:
+        pass
+
+
 @pytest.fixture()
 def driver():
     """A browser on the login screen, with Flutter's semantics tree enabled.
@@ -23,6 +36,7 @@ def driver():
     Nothing needs clearing first: Selenium starts each session on a throwaway
     profile, so web storage is already empty and the portal opens logged out."""
     drv = create_driver()
+    _record_browser(drv)
     try:
         open_app(drv)
         yield drv
