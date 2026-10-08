@@ -1,0 +1,125 @@
+name: Sanity / Smoke / Regression (web portal)
+
+# Runs the three test tiers in order against the live teacher portal, then posts
+# ONE Slack message listing every test each tier ran with its own pass/fail,
+# headed by the build tested (version.json), the version check (login page vs
+# deployed), school and mobile.
+#
+# The tiers are nested: sanity is a subset of smoke, smoke of regression. A tier
+# only runs when the one before it passed (a portal that cannot log in makes the
+# wider tiers noise); the report marks a skipped tier "not run", never green.
+# Set `run_all_tiers: true` to run every tier regardless.
+#
+# Needs no device - just Chrome - so it runs on a GitHub-hosted runner.
+
+on:
+  schedule:
+    - cron: "15 3 * * *" # 08:45 IST daily
+  workflow_dispatch:
+    inputs:
+      run_all_tiers:
+        description: "Run smoke and regression even if an earlier tier failed"
+        type: boolean
+        default: false
+      regression_markers:
+        description: "pytest -m expression for the regression tier"
+        required: false
+        default: "not heavy"
+      base_url:
+        description: "Site under test"
+        required: false
+        default: "https://teacher.englishgurukul.in/"
+
+env:
+  BASE_URL: ${{ inputs.base_url || 'https://teacher.englishgurukul.in/' }}
+  BROWSER: chrome
+  HEADLESS: "true"
+  WINDOW_WIDTH: "1440"
+  WINDOW_HEIGHT: "900"
+  DEFAULT_TIMEOUT: "30"
+  APP_LOAD_TIMEOUT: "90"
+  DATA_LOAD_TIMEOUT: "60"
+  REGRESSION_MARKERS: ${{ inputs.regression_markers || 'not heavy' }}
+  RUN_ALL: ${{ inputs.run_all_tiers || 'false' }}
+
+jobs:
+  tiers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Show browser under test
+        run: |
+          if ! command -v google-chrome >/dev/null 2>&1; then
+            wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+            sudo apt-get update
+            sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+          fi
+          google-chrome --version
+
+      - name: Check the portal is reachable
+        run: |
+          echo "Site under test: $BASE_URL"
+          curl --silent --show-error --fail --location \
+               --retry 5 --retry-delay 10 --retry-all-errors \
+               --max-time 60 --output /dev/null --write-out 'HTTP %{http_code} in %{time_total}s\n' \
+               "$BASE_URL"
+          curl --silent --fail "${BASE_URL}version.json" && echo
+
+      # -- tier 1: sanity --------------------------------------------------------
+      - name: Sanity
+        id: sanity
+        continue-on-error: true
+        run: python -m pytest -m sanity --reruns 1 --reruns-delay 5 --junitxml=reports/junit_sanity.xml
+
+      # -- tier 2: smoke (only if sanity passed, unless run_all_tiers) -----------
+      - name: Smoke
+        id: smoke
+        if: steps.sanity.outcome == 'success' || env.RUN_ALL == 'true'
+        continue-on-error: true
+        run: python -m pytest -m smoke --reruns 1 --reruns-delay 5 --junitxml=reports/junit_smoke.xml
+
+      # -- tier 3: regression (only if smoke passed, unless run_all_tiers) -------
+      - name: Regression
+        id: regression
+        if: steps.smoke.outcome == 'success' || env.RUN_ALL == 'true'
+        continue-on-error: true
+        run: python -m pytest -m "$REGRESSION_MARKERS" --reruns 1 --reruns-delay 5 --junitxml=reports/junit_regression.xml
+
+      - name: Post tiered summary to Slack
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          python -m utils.tier_summary \
+            sanity=reports/junit_sanity.xml \
+            smoke=reports/junit_smoke.xml \
+            regression=reports/junit_regression.xml || true
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiered-reports
+          path: reports/
+          retention-days: 14
+
+      - name: Fail the job if any tier failed or was skipped
+        if: always()
+        run: |
+          for t in sanity smoke regression; do
+            [ -f "reports/junit_$t.xml" ] || { echo "$t did not run"; exit 1; }
+          done
+          python -m utils.tier_summary --dry-run \
+            sanity=reports/junit_sanity.xml smoke=reports/junit_smoke.xml \
+            regression=reports/junit_regression.xml > /dev/null

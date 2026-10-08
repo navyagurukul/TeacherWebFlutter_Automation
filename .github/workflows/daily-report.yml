@@ -1,5 +1,8 @@
 name: Daily QA report
 
+# Runs the whole web suite against the live teacher portal at BASE_URL and posts
+# the summary to Slack.
+#
 # The web suite needs no device and no Appium server - just a browser - so it
 # runs on a GitHub-hosted runner. That is the whole reason this can live in CI
 # while the Android suite needs a self-hosted machine with a phone attached.
@@ -15,6 +18,26 @@ on:
         description: "pytest args (blank = whole suite, e.g. -m smoke)"
         required: false
         default: ""
+      base_url:
+        description: "Site under test"
+        required: false
+        default: "https://teacher.englishgurukul.in/"
+
+env:
+  # Stated here rather than left to the default in config/settings.py: .env is
+  # gitignored, so without this line nothing in the repo says which portal the
+  # daily report actually covered - and the report goes to Slack, where that is
+  # the first thing anyone asks.
+  BASE_URL: ${{ inputs.base_url || 'https://teacher.englishgurukul.in/' }}
+  BROWSER: chrome
+  HEADLESS: "true"
+  WINDOW_WIDTH: "1440"
+  WINDOW_HEIGHT: "900"
+  # Headroom over the local defaults: the runner is slower than a laptop and the
+  # portal is a CanvasKit build that boots the Flutter engine before first paint.
+  DEFAULT_TIMEOUT: "30"
+  APP_LOAD_TIMEOUT: "90"
+  DATA_LOAD_TIMEOUT: "60"
 
 jobs:
   qa:
@@ -33,9 +56,27 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Show browser under test
-        # Selenium Manager resolves the driver itself; this only records which
-        # Chrome the run used, so a failure can be tied to a browser version.
-        run: google-chrome --version
+        # Selenium Manager resolves the driver itself; this records which Chrome
+        # the run used, so a failure can be tied to a browser version, and
+        # installs it if the runner image ever stops shipping one.
+        run: |
+          if ! command -v google-chrome >/dev/null 2>&1; then
+            wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+            sudo apt-get update
+            sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+          fi
+          google-chrome --version
+
+      - name: Check the portal is reachable
+        # If the site is down, say that in one line here instead of letting the
+        # report land in Slack as a wall of timed-out locators that reads like a
+        # suite-wide regression.
+        run: |
+          echo "Site under test: $BASE_URL"
+          curl --silent --show-error --fail --location \
+               --retry 5 --retry-delay 10 --retry-all-errors \
+               --max-time 60 --output /dev/null --write-out 'HTTP %{http_code} in %{time_total}s\n' \
+               "$BASE_URL"
 
       - name: Run QA pass and post to Slack
         env:
@@ -43,7 +84,6 @@ jobs:
           # the run still happens and the report prints to the job log instead of
           # posting - it does not fail.
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          HEADLESS: "true"
         run: python run_daily.py ${{ inputs.scope }}
 
       - name: Upload reports
