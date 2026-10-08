@@ -4,11 +4,13 @@ the tier report to Slack.
     python run_tiers.py              # sanity -> smoke -> regression, post to Slack
     python run_tiers.py --dry-run    # same run, print the report instead
     python run_tiers.py --all        # run every tier even if an earlier one failed
+    python run_tiers.py --scheduled  # the daily task: coordinate with GitHub first
 
 Mirrors .github/workflows/tiered-suite.yml: each tier runs only when the one
 before it passed, and a tier that did not run is reported "not run". Scheduled
 daily by the Windows task "TeacherWeb QA Tiers" (run only when the user is
-logged on, so the browser shows on screen).
+logged on, so the browser shows on screen). When the PC is off, the GitHub
+workflow's scheduled run covers the day headless (see utils/run_marker.py).
 """
 from __future__ import annotations
 
@@ -43,8 +45,21 @@ def main() -> int:
     args = sys.argv[1:]
     dry_run = "--dry-run" in args
     run_all = "--all" in args
+    scheduled = "--scheduled" in args
 
     REPORTS.mkdir(parents=True, exist_ok=True)
+
+    if scheduled:
+        # The daily task: if the PC was off and GitHub already ran today's tiers
+        # headless, don't post a second report; otherwise claim today's run so
+        # GitHub's fallback skips.
+        from utils import run_marker
+
+        if run_marker.github_ran_today():
+            log("skipped: GitHub already ran today's tiers (PC was off)")
+            return 0
+        if not run_marker.mark_pc_run():
+            log("warning: could not record the PC run on GitHub; its fallback may also run")
     env = dict(os.environ, HEADLESS="false", PYTHONIOENCODING="utf-8")
 
     # Forget the last run's results so the report can only show today's.
