@@ -10,11 +10,12 @@ name: Sanity / Smoke / Regression (web portal)
 # wider tiers noise); the report marks a skipped tier "not run", never green.
 # Set `run_all_tiers: true` to run every tier regardless.
 #
-# Needs no device - just Chrome - so it runs on a GitHub-hosted runner.
+# Needs no device - just Chrome - so it runs on a GitHub-hosted runner (headless).
 
+# The DAILY run happens on the QA PC instead (run_tiers.py via the Windows task
+# "TeacherWeb QA Tiers"), so the Chrome window is visible while it tests. This
+# workflow is manual only: a headless run on GitHub's servers, on demand.
 on:
-  schedule:
-    - cron: "15 3 * * *" # 08:45 IST daily
   workflow_dispatch:
     inputs:
       run_all_tiers:
