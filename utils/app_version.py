@@ -56,6 +56,30 @@ def _from_version_json() -> str | None:
     return str(version).strip() if version else None
 
 
+def deployed_version() -> str | None:
+    """The version the deployed site reports for itself, independent of anything
+    the browser rendered. Public so tests and the report can cross-check the
+    footer against it."""
+    return _from_version_json()
+
+
+def mismatch() -> tuple[str, str] | None:
+    """`(shown, deployed)` when the version the portal *displayed* disagrees with
+    the version the deployed site *reports* — otherwise None.
+
+    Two independent sources for one fact are only worth having if something
+    compares them. A stale CDN bundle or a run pointed at the wrong environment
+    shows up exactly here: the footer says one build, version.json says another,
+    and without this the report would confidently publish the footer and nobody
+    would learn the suite had tested a different build than it named.
+    """
+    shown = _from_captured()
+    deployed = deployed_version()
+    if shown and deployed and shown != deployed:
+        return shown, deployed
+    return None
+
+
 SOURCES = [
     (_from_captured, "login screen"),
     (_from_env, "APP_VERSION override"),
@@ -104,6 +128,15 @@ def label() -> str:
 
 
 def label_with_source() -> str:
-    """e.g. 'V2.4.3  (login screen)' - version plus where it was read from."""
+    """e.g. 'V2.4.3  (login screen)' - version plus where it was read from.
+
+    If the footer and version.json disagree, both are named rather than the
+    report quietly picking one.
+    """
     version, origin = resolve_with_source()
-    return f"V{version}  ({origin})" if version else f"unknown  ({origin})"
+    label = f"V{version}  ({origin})" if version else f"unknown  ({origin})"
+    disagreement = mismatch()
+    if disagreement:
+        shown, deployed = disagreement
+        label += f"  :warning: version.json reports *{deployed}*, not *{shown}*"
+    return label

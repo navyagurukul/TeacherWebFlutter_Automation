@@ -9,6 +9,7 @@ import pytest
 
 from data.test_data import Text
 from pages.home_page import BOX_TO_TITLE, NAV_TO_TITLE
+from utils import school_enrolment
 
 TABS = [Text.NAV_LESSONS, Text.NAV_CLASS, Text.NAV_STUDENTS, Text.NAV_MANAGE, Text.NAV_HOME]
 
@@ -54,3 +55,17 @@ def test_drawer_lists_every_menu_item(home):
         Text.MENU_LOGOUT,
     ):
         assert home.is_visible(item, timeout=10), f"Drawer is missing {item!r}"
+
+
+@pytest.mark.smoke
+@pytest.mark.navigation
+def test_home_shows_enrolment_counts(home):
+    """The school-summary card reads "Registered:"/"Remaining:" over a column of
+    counts. Assert both are shown and record them so the daily report can
+    publish the seats still open (utils/school_enrolment.py)."""
+    counts = home.enrolment_counts()
+    assert counts, "home dashboard did not show the Registered/Remaining counts"
+    assert counts["registered"] + counts["remaining"] == counts["total"], (
+        f"counts do not add up to the total strength: {counts}"
+    )
+    school_enrolment.capture(counts)

@@ -38,7 +38,7 @@ load_dotenv(ROOT / ".env")
 sys.path.insert(0, str(ROOT))
 from config import settings  # noqa: E402
 from data.test_data import SCHOOL_NAME, TEACHER_MOBILE  # noqa: E402
-from utils import app_version  # noqa: E402
+from utils import app_version, school_enrolment  # noqa: E402
 
 # Windows consoles default to cp1252, which cannot print the emoji in the report.
 try:
@@ -158,6 +158,9 @@ def main() -> None:
     # Forget the footer captured by an earlier run: after a deploy that stale
     # file would make today's report show the previous build's version.
     app_version.clear_capture()
+    # Same for the enrolment counts: a stale capture would publish an earlier
+    # run's seat numbers as today's.
+    school_enrolment.clear_capture()
 
     args = explicit or (["-m", "smoke"] if smoke_only else [])
     records = parse_junit(run_pytest(args, "junit_daily.xml"))
@@ -165,6 +168,7 @@ def main() -> None:
     # Resolve the version *after* the run, so a UI login can have written the
     # live footer to reports/app_version.txt.
     version = app_version.label_with_source()
+    enrolment = school_enrolment.label_with_source()
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     if not records:
@@ -185,6 +189,7 @@ def main() -> None:
         f"*Teacher Web QA — Daily* ({now})   {status}",
         f"Portal: {settings.BASE_URL}  •  Version: *{version}*",
         f"Account: Mobile: *{TEACHER_MOBILE}*  •  School: *{SCHOOL_NAME}*",
+        f"Enrolment: {enrolment}",
         f"Passed {passed}/{total}  •  Failed {failed}  •  Skipped {skipped}  •  {runtime:.0f}s",
         "",
     ]

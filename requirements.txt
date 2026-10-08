@@ -4,3 +4,5 @@ pytest-html==4.1.1
 pytest-rerunfailures==14.0
 python-dotenv==1.0.1
 requests==2.32.3
+# link_check reads the PDFs to follow the links inside them.
+pypdf==5.1.0

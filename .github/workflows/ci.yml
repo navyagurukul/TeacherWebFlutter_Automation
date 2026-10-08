@@ -6,6 +6,10 @@ name: CI
 # independently - a smoke break and a regression break are different news - and
 # neither waits on the other.
 #
+# Every job drives the live teacher portal at BASE_URL in a real headless
+# Chrome. There is nothing to build and nothing to deploy here: the suite is
+# black-box against the deployed site.
+#
 # The daily workflow still runs the whole suite in one session and posts the
 # Slack summary; this one only answers "did this change break anything".
 
@@ -15,6 +19,28 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Site under test"
+        required: false
+        default: "https://teacher.englishgurukul.in/"
+
+env:
+  # The site under test, stated here rather than left to the default in
+  # config/settings.py: .env is gitignored, so without this line nothing in the
+  # repo says which portal CI actually opened. workflow_dispatch can point a
+  # one-off run at another environment.
+  BASE_URL: ${{ inputs.base_url || 'https://teacher.englishgurukul.in/' }}
+  BROWSER: chrome
+  HEADLESS: "true"
+  WINDOW_WIDTH: "1440"
+  WINDOW_HEIGHT: "900"
+  # Runners are slower and further from the API than a laptop, and the portal is
+  # a CanvasKit build that must boot the Flutter engine before it paints
+  # anything. These are the local defaults with headroom, not new behaviour.
+  DEFAULT_TIMEOUT: "30"
+  APP_LOAD_TIMEOUT: "90"
+  DATA_LOAD_TIMEOUT: "60"
 
 jobs:
   tests:
@@ -50,11 +76,29 @@ jobs:
           python -c "import sys; sys.path.insert(0, '.'); import conftest; from pages.login_page import LoginPage; print('imports OK')"
 
       - name: Show browser under test
-        run: google-chrome --version
+        # Selenium Manager resolves the driver itself, so only the browser has
+        # to exist. The runner image ships Chrome; install it if that ever
+        # changes rather than failing several minutes later inside a locator.
+        run: |
+          if ! command -v google-chrome >/dev/null 2>&1; then
+            wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+            sudo apt-get update
+            sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+          fi
+          google-chrome --version
+
+      - name: Check the portal is reachable
+        # A DNS failure, an expired certificate or a site-down outage is not a
+        # test failure, and reading it off a wall of timed-out locators wastes
+        # the morning. Say so here in one line instead.
+        run: |
+          echo "Site under test: $BASE_URL"
+          curl --silent --show-error --fail --location \
+               --retry 5 --retry-delay 10 --retry-all-errors \
+               --max-time 60 --output /dev/null --write-out 'HTTP %{http_code} in %{time_total}s\n' \
+               "$BASE_URL"
 
       - name: ${{ matrix.suite }} tests
-        env:
-          HEADLESS: "true"
         run: python -m pytest -m ${{ matrix.suite }} -v
 
       - name: Upload reports

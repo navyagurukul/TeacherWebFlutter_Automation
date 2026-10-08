@@ -11,8 +11,8 @@ from __future__ import annotations
 
 # The one school every test logs into. SCHOOL_SEARCH is what we type into the
 # picker's search box; SCHOOL_NAME is the exact list row we click.
-SCHOOL_SEARCH = "Sanskruthi"
-SCHOOL_NAME = "Sanskruthi School - Nalgonda"
+SCHOOL_SEARCH = "Samskruthi"
+SCHOOL_NAME = "Samskruthi School - IMS School - Nalgonda"
 
 # Teacher used for login. This number is already enrolled at Sanskruthi; the
 # login-or-register flow enrols it via the license code below if that changes.
@@ -119,12 +119,20 @@ class Text:
     DARK_MODE_TOGGLE = "Switch to dark mode"
     LIGHT_MODE_TOGGLE = "Switch to light mode"
     COPY_LICENSE = "Copy license code"
+    # School-summary card on the home dashboard. The legend renders as a
+    # label column beside a value column ("Registered:", "Remaining:", then
+    # "256", "92"), so the counts are paired by position, not adjacency.
+    LEGEND_REGISTERED = "Registered"
+    LEGEND_REMAINING = "Remaining"
+
     LICENSE_CODE_LABEL = "STUDENT LICENSE CODE"
 
     # -- section content ------------------------------------------------------
     # Lesson Plan: a class picker plus a "<n> LESSON PLANS" count.
     LESSON_PLANS_SUFFIX = "LESSON PLANS"
     LESSON_START = "START"
+    # v2.5: a completed assessment row offers RESTART instead of START.
+    LESSON_RESTART = "RESTART"
 
     # Class / Student Report filters.
     FILTER_BY_CATEGORY = "FILTER BY CATEGORY"

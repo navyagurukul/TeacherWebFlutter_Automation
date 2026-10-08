@@ -66,7 +66,7 @@ class LessonPlanPage(BasePage):
         chrome = {
             Text.NAV_HOME, Text.NAV_LESSONS, Text.NAV_CLASS,
             Text.NAV_STUDENTS, Text.NAV_MANAGE, Text.MENU_BUTTON,
-            Text.TITLE_LESSON_PLAN, Text.LESSON_START,
+            Text.TITLE_LESSON_PLAN, Text.LESSON_START, Text.LESSON_RESTART,
             Text.DARK_MODE_TOGGLE, Text.LIGHT_MODE_TOGGLE,
         }
         titles = []
