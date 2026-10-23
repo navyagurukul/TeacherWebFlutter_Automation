@@ -38,8 +38,8 @@ def test_lesson_plan_count_matches_listed_plans(lessons):
 @pytest.mark.regression
 @pytest.mark.lessons
 def test_lesson_plan_card_expands(lessons):
-    titles = lessons.plan_titles()
-    assert titles, "no lesson plans to open"
+    titles = lessons.numbered_plan_titles()
+    assert titles, "no numbered lesson plans to open"
     lessons.open_plan(titles[0])
     assert lessons.start_visible(), (
         f"Opening plan {titles[0]!r} did not reveal its {Text.LESSON_START} action"
