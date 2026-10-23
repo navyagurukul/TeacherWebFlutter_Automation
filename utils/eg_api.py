@@ -16,15 +16,32 @@ import time
 
 import requests
 
-# Base URLs from lib/services/api/api_config.dart.
-PROD = "https://eg360-production-api.wonderfulsand-b8a3ee90.centralindia.azurecontainerapps.io"
+# Since v2.5.4 the portal resolves its backend at startup from this remote
+# config (EgTeacherApp.<env>.base_url) rather than a hardcoded URL, so the
+# suite reads the same file and follows backend moves (Azure -> GCP, Oct 2026).
+# PROD is the fallback when the config can't be fetched.
+BASE_URL_CONFIG = "https://storage.googleapis.com/eg_videos/base_url_config_gcp.json"
+CONFIG_APP = "EgTeacherApp"
+PROD = "https://eg-infra-api-541085401763.asia-south1.run.app"
 DEV = "https://eg-360-dev.englishgurukul.in"
 API_VERSION = "v1"
 
 
+def resolve_base_url(env: str = "prod") -> str:
+    """The backend the live portal uses for `env`, as its ConfigResolver finds it."""
+    fallback = PROD if env == "prod" else DEV
+    try:
+        r = requests.get(BASE_URL_CONFIG, timeout=15)
+        r.raise_for_status()
+        url = r.json()[CONFIG_APP][env]["base_url"]
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        return fallback
+    return str(url).rstrip("/") or fallback
+
+
 class EgApi:
-    def __init__(self, base_url: str = PROD, timeout: int = 30):
-        self.base_url = base_url.rstrip("/")
+    def __init__(self, base_url: str | None = None, timeout: int = 30):
+        self.base_url = (base_url or resolve_base_url()).rstrip("/")
         self.timeout = timeout
         self.session = requests.Session()
         self.access = None

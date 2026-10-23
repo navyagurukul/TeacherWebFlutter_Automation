@@ -67,6 +67,7 @@ class LessonPlanPage(BasePage):
             Text.NAV_HOME, Text.NAV_LESSONS, Text.NAV_CLASS,
             Text.NAV_STUDENTS, Text.NAV_MANAGE, Text.MENU_BUTTON,
             Text.TITLE_LESSON_PLAN, Text.LESSON_START, Text.LESSON_RESTART,
+            Text.LESSON_STOP,
             Text.DARK_MODE_TOGGLE, Text.LIGHT_MODE_TOGGLE,
         }
         titles = []
@@ -92,5 +93,14 @@ class LessonPlanPage(BasePage):
         return self
 
     def start_visible(self, timeout: int = 15) -> bool:
-        """Whether the expanded card exposes its START action."""
-        return self.is_visible(Text.LESSON_START, timeout=timeout)
+        """Whether the expanded card exposes its lesson action: START, or
+        RESTART / STOP once the lesson has been run."""
+        if self.is_visible(Text.LESSON_START, timeout=timeout):
+            return True
+        return any(self.is_visible(label, timeout=2)
+                   for label in (Text.LESSON_RESTART, Text.LESSON_STOP))
+
+    def numbered_plan_titles(self) -> list[str]:
+        """Titles of the "<n> - <title>" lesson cards. Programme cards such as
+        'Microschedule - Sparkle 1' carry only a PDF and have no START."""
+        return [t for t in self.plan_titles() if re.match(r"\d+\s*-\s", t)]
