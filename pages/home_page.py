@@ -93,6 +93,13 @@ def _total_for(values: list[str]) -> int | None:
     return None
 
 
+# Header title -> other text only that destination shows. The web header title
+# sometimes reaches the semantics tree late (screen fully painted, title node
+# missing - seen on Student Management), so either one proves we arrived.
+TITLE_LANDMARKS = {
+    Text.TITLE_MANAGEMENT: Text.MANAGEMENT_HEADER,
+}
+
 # Error states a healthy section must not be showing.
 ERROR_STATES = (Text.GENERIC_ERROR, Text.NO_INTERNET)
 
@@ -111,8 +118,29 @@ class HomePage(BasePage):
 
     def go_to(self, nav_label: str, timeout: int = 45):
         self.click_button(nav_label)
-        self.find_text(NAV_TO_TITLE[nav_label], timeout=timeout)
+        self._wait_for_destination(NAV_TO_TITLE[nav_label], timeout)
         return self
+
+    def _title_or_landmark(self, title: str):
+        """The displayed node for the title, else for its landmark, else None."""
+        for text in (title, TITLE_LANDMARKS.get(title)):
+            if text:
+                hit = next(iter(self._visible_elements(self.node_xpath(text))), None)
+                if hit:
+                    return hit
+        return None
+
+    def _wait_for_destination(self, title: str, timeout: int) -> None:
+        """Wait until the destination's title (or its landmark) is on screen.
+        If it never appears, re-assert semantics once and look again before
+        failing: a stale accessibility tree is the usual cause, not navigation."""
+        try:
+            self._poll(lambda: self._title_or_landmark(title), timeout,
+                       f"no visible node showing {title!r}")
+        except TimeoutError:
+            self.ensure_semantics()
+            self._poll(lambda: self._title_or_landmark(title), 15,
+                       f"no visible node showing {title!r} (after re-enabling semantics)")
 
     def go_home(self, timeout: int = 30):
         self.click_button(Text.NAV_HOME)
@@ -120,12 +148,16 @@ class HomePage(BasePage):
         return self
 
     def current_title_is(self, title: str, timeout: int = 20) -> bool:
-        return self.is_visible(title, timeout=timeout)
+        try:
+            self._wait_for_destination(title, timeout)
+            return True
+        except TimeoutError:
+            return False
 
     def open_box(self, box_label: str, timeout: int = 45):
         """Click a home-dashboard box and wait for its section header."""
         self.click_button(box_label)
-        self.find_text(BOX_TO_TITLE[box_label], timeout=timeout)
+        self._wait_for_destination(BOX_TO_TITLE[box_label], timeout)
         return self
 
     def section_is_healthy(self) -> bool:
