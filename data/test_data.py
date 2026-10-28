@@ -133,6 +133,8 @@ class Text:
     LESSON_START = "START"
     # v2.5: a completed assessment row offers RESTART instead of START.
     LESSON_RESTART = "RESTART"
+    # v2.5.4: a lesson in progress offers STOP.
+    LESSON_STOP = "STOP"
 
     # Class / Student Report filters.
     FILTER_BY_CATEGORY = "FILTER BY CATEGORY"
