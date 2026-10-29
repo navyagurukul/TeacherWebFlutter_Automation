@@ -173,7 +173,7 @@ def main() -> None:
 
     if not records:
         post_slack(
-            f"*Teacher Web QA — Daily* ({now})   ⚠️ could not run any tests\n"
+            f"*{settings.REPORT_TITLE} — Daily* ({now})   ⚠️ could not run any tests\n"
             f"Portal: {settings.BASE_URL}  •  Version: {version}"
         )
         sys.exit(1)
@@ -186,7 +186,7 @@ def main() -> None:
     status = "✅ PASS" if failed == 0 else "❌ FAIL"
 
     lines = [
-        f"*Teacher Web QA — Daily* ({now})   {status}",
+        f"*{settings.REPORT_TITLE} — Daily* ({now})   {status}",
         f"Portal: {settings.BASE_URL}  •  Version: *{version}*",
         f"Account: Mobile: *{TEACHER_MOBILE}*  •  School: *{SCHOOL_NAME}*",
         f"Enrolment: {enrolment}",

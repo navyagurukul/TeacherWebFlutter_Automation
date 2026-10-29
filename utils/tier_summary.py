@@ -187,7 +187,7 @@ def build_message(paths: dict[str, str]) -> tuple[str, int]:
 
     info = deployed()
     lines = [
-        f"*Teacher Web QA — Sanity / Smoke / Regression* ({now})   {status}",
+        f"*{settings.REPORT_TITLE} — Sanity / Smoke / Regression* ({now})   {status}",
         f"Build tested: *{build_line(info)}*",
         f"App version: *{app_version.label_with_source()}*",
         f"Version check: {version_check(info)}",

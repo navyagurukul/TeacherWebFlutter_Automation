@@ -12,6 +12,7 @@ Endpoints (see lib/services/*):
 """
 from __future__ import annotations
 
+import os
 import time
 
 import requests
@@ -21,8 +22,9 @@ import requests
 # suite reads the same file and follows backend moves (Azure -> GCP, Oct 2026).
 # PROD is the fallback when the config can't be fetched.
 BASE_URL_CONFIG = "https://storage.googleapis.com/eg_videos/base_url_config_gcp.json"
-CONFIG_APP = "EgTeacherApp"
-PROD = "https://eg-infra-api-541085401763.asia-south1.run.app"
+# ES Teacher web sets API_CONFIG_APP=EsTeacherApp (the Gujarat backend).
+CONFIG_APP = os.getenv("API_CONFIG_APP") or "EgTeacherApp"
+PROD = os.getenv("API_PROD_URL") or "https://eg-infra-api-541085401763.asia-south1.run.app"
 DEV = "https://eg-360-dev.englishgurukul.in"
 API_VERSION = "v1"
 

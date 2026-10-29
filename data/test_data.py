@@ -9,14 +9,18 @@ that is called out on the constant.
 """
 from __future__ import annotations
 
+import os
+
 # The one school every test logs into. SCHOOL_SEARCH is what we type into the
 # picker's search box; SCHOOL_NAME is the exact list row we click.
-SCHOOL_SEARCH = "Samskruthi"
-SCHOOL_NAME = "Samskruthi School - IMS School - Nalgonda"
+# The ES Teacher web run (es-tiered-suite.yml) overrides these through the
+# environment with its own account; nothing else should.
+SCHOOL_SEARCH = os.getenv("SCHOOL_SEARCH") or "Samskruthi"
+SCHOOL_NAME = os.getenv("SCHOOL_NAME") or "Samskruthi School - IMS School - Nalgonda"
 
 # Teacher used for login. This number is already enrolled at Sanskruthi; the
 # login-or-register flow enrols it via the license code below if that changes.
-TEACHER_MOBILE = "9000000001"
+TEACHER_MOBILE = os.getenv("TEACHER_MOBILE") or "9000000001"
 TEACHER_NAME = "QA Automation"
 TEACHER_LANGUAGE = "English"
 
@@ -42,7 +46,7 @@ LANGUAGE_ORDER = [
 ]
 
 # License code for Sanskruthi School - Nalgonda (used by the REGISTER flow).
-LICENSE_CODE = "SANK48"
+LICENSE_CODE = os.getenv("TEACHER_LICENSE_CODE") or "SANK48"
 
 # Inputs used by login validation tests.
 INVALID_MOBILE_SHORT = "12345"
