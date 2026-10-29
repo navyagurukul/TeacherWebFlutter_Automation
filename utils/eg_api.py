@@ -178,6 +178,42 @@ class EgApi:
         data = self._data(self._get(f"lesson-plans/{plan_id}/detail/"))
         return data if isinstance(data, dict) else {}
 
+    # -- assessments ----------------------------------------------------------
+
+    def class_id_for(self, school_id: str, class_name: str) -> str:
+        for cls in self.classes(school_id):
+            if str(cls.get("class_name", "")).strip().lower() == class_name.strip().lower():
+                return str(cls["id"])
+        raise RuntimeError(f"class {class_name!r} not found in school {school_id}")
+
+    def assessments(self, class_id: str) -> list:
+        """Assessment cards of a class as the Lesson Plan screen draws them: each
+        plan's `test_assessments`, tagged with the plan it sits under. Status is
+        per class (the same assessment id can be shared by several classes)."""
+        out = []
+        for plan in self.plans(class_id):
+            for test in plan.get("test_assessments") or []:
+                out.append({**test, "plan": plan.get("display_name", "")})
+        return out
+
+    def assessment(self, class_id: str, name: str) -> dict:
+        for test in self.assessments(class_id):
+            if str(test.get("display_name", "")).strip().lower() == name.strip().lower():
+                return test
+        raise RuntimeError(f"assessment {name!r} not found in class {class_id}")
+
+    def set_assessment_status(self, class_id: str, assessment_id: str, status: str) -> None:
+        """PATCH `class-tests/update-status/` exactly as the portal's START /
+        STOP / RESTART buttons do: `unlocked` runs it, `completed` stops it."""
+        r = self.session.patch(
+            self._url("class-tests/update-status/"),
+            json={"class_id": class_id, "test_assessment_id": assessment_id,
+                  "status": status},
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        r.raise_for_status()
+
 
 def best_video_urls(video: dict) -> list:
     """All non-empty MP4 URLs for a video (one per language, best quality),

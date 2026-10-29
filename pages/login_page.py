@@ -78,8 +78,16 @@ class LoginPage(BasePage):
 
     # -- journeys -------------------------------------------------------------
 
-    def login(self, mobile: str = TEACHER_MOBILE, school_name: str = SCHOOL_NAME) -> HomePage:
-        self.select_school(school_name)
+    def login(
+        self,
+        mobile: str = TEACHER_MOBILE,
+        school_name: str = SCHOOL_NAME,
+        search: str | None = None,
+    ) -> HomePage:
+        # Another school needs its own search term; the default only finds Samskruthi.
+        if search is None:
+            search = SCHOOL_SEARCH if school_name == SCHOOL_NAME else school_name.split(" - ")[0]
+        self.select_school(school_name, search)
         self.enter_mobile(mobile)
         self.click_login()
         return HomePage(self.driver).wait_loaded()

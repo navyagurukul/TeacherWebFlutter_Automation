@@ -9,6 +9,10 @@ that is called out on the constant.
 """
 from __future__ import annotations
 
+import os
+
+import config.settings  # noqa: F401  (loads .env)
+
 # The one school every test logs into. SCHOOL_SEARCH is what we type into the
 # picker's search box; SCHOOL_NAME is the exact list row we click.
 SCHOOL_SEARCH = "Samskruthi"
@@ -40,6 +44,10 @@ LANGUAGE_ORDER = [
     "Assamese",
     "Sanskrit",
 ]
+
+# Class whose Lesson Plan assessments the suite checks (and, opt-in, starts /
+# stops). Override with ASSESSMENT_CLASS in .env.
+ASSESSMENT_CLASS = os.getenv("ASSESSMENT_CLASS", "Class 1")
 
 # License code for Sanskruthi School - Nalgonda (used by the REGISTER flow).
 LICENSE_CODE = "SANK48"
@@ -136,6 +144,16 @@ class Text:
     # v2.5.4: a lesson in progress offers STOP.
     LESSON_STOP = "STOP"
 
+    # Assessment cards sit under their lesson plan. The card is a semantics
+    # group labelled with its name ("Assessment 1") holding one action button
+    # whose label is the card's state: START (locked), STOP (in progress,
+    # backend "unlocked"), RESTART (completed).
+    ASSESSMENT_PREFIX = "Assessment"
+    ASSESSMENT_IN_PROGRESS = "In Progress"
+    ASSESSMENT_COMPLETED = "Completed"
+    ASSESSMENT_LOCKED = "Locked"
+    ASSESSMENT_UPDATE_FAILED = "Could not update the test"
+
     # Class / Student Report filters.
     FILTER_BY_CATEGORY = "FILTER BY CATEGORY"
     FILTER_BY_COURSE = "FILTER BY COURSE"
@@ -165,3 +183,18 @@ MANAGEMENT_ACTIONS = [
     Text.MANAGE_DELETE,
     Text.MANAGE_BULK,
 ]
+
+
+# Assessment state <-> the button its card shows, and the backend status each
+# action sets (class-tests/update-status/). START and RESTART both run the test.
+ASSESSMENT_ACTION_FOR_STATUS = {
+    "locked": Text.LESSON_START,
+    "unlocked": Text.LESSON_STOP,
+    "completed": Text.LESSON_RESTART,
+}
+ASSESSMENT_STATUS_FOR_ACTION = {v: k for k, v in ASSESSMENT_ACTION_FOR_STATUS.items()}
+ASSESSMENT_STATUS_AFTER_ACTION = {
+    Text.LESSON_START: "unlocked",
+    Text.LESSON_STOP: "completed",
+    Text.LESSON_RESTART: "unlocked",
+}

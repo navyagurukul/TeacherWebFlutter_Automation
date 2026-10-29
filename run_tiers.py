@@ -69,19 +69,24 @@ def main() -> int:
 
     log("=== tiers start (visible browser) ===")
     previous_ok = True
-    for name, marker in TIERS:
-        if not previous_ok and not run_all:
-            log(f"{name}: not run (previous tier failed)")
-            continue
-        junit = REPORTS / f"junit_{name}.xml"
-        code = subprocess.call(
-            [PY, "-m", "pytest", *marker, "-p", "no:cacheprovider",
-             f"--junitxml={junit}", f"--html=reports/report_{name}.html",
-             "--self-contained-html"],
-            cwd=ROOT, env=env,
-        )
-        previous_ok = code == 0
-        log(f"{name}: pytest exit {code}")
+    try:
+        for name, marker in TIERS:
+            if not previous_ok and not run_all:
+                log(f"{name}: not run (previous tier failed)")
+                continue
+            junit = REPORTS / f"junit_{name}.xml"
+            code = subprocess.call(
+                [PY, "-m", "pytest", *marker, "-p", "no:cacheprovider",
+                 f"--junitxml={junit}", f"--html=reports/report_{name}.html",
+                 "--self-contained-html"],
+                cwd=ROOT, env=env,
+            )
+            previous_ok = code == 0
+            log(f"{name}: pytest exit {code}")
+    except KeyboardInterrupt:
+        # Ctrl+C in the console window: still report the tiers that finished,
+        # otherwise a whole morning's run leaves nothing in Slack.
+        log("interrupted (Ctrl+C) - posting what finished")
 
     summary = [PY, "-X", "utf8", "-m", "utils.tier_summary",
                *[f"{n}=reports/junit_{n}.xml" for n, _ in TIERS]]
