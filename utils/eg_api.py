@@ -6,7 +6,8 @@ Endpoints (see lib/services/*):
   GET  backend/v1/schools/list/             -> {data:[{id, school_name}]}
   POST accounts/v1/auth/instructor-login/  {mobile_number, school_id} -> {data:{access,refresh}}
   GET  accounts/v1/auth/me/                -> {data:{..., school:{id,...}}}
-  GET  management/v1/schools/<sid>/classes/ -> {data:[{id, class_name, ...}]}
+  GET  management/v1/schools/<sid>/           -> {data:{total_strength, total_registered_students, ...}}
+  GET  management/v1/schools/<sid>/classes/ -> {data:[{id, class_name, program, ...}], next}  (paged: ?page=N)
   GET  backend/v1/lesson-plans/<cid>/       -> {data:[{id, display_name, ...}]}
   GET  backend/v1/lesson-plans/<pid>/detail/-> {data:{pdfs:[...], videos:[...]}}
 """
@@ -98,10 +99,13 @@ class EgApi:
         if school_name is None:
             from data.test_data import SCHOOL_NAME
             school_name = SCHOOL_NAME
+        # Remember the school picked at login: a number that teaches at several
+        # schools gets its *primary* school from auth/me, not this one.
+        self._login_school_id = self.school_id_for(school_name)
         r = self.session.post(
             self._url("auth/instructor-login/", module="accounts"),
             json={"mobile_number": mobile_number,
-                  "school_id": self.school_id_for(school_name)},
+                  "school_id": self._login_school_id},
             headers={"Accept": "application/json", "Content-Type": "application/json"},
             timeout=self.timeout,
         )
@@ -140,6 +144,8 @@ class EgApi:
         return ""
 
     def school_id(self) -> str:
+        if getattr(self, "_login_school_id", None):
+            return self._login_school_id
         me = self.me()
         sid = self.school().get("id") or me.get("school_id")
         if not sid:
@@ -177,6 +183,65 @@ class EgApi:
     def plan_detail(self, plan_id: str) -> dict:
         data = self._data(self._get(f"lesson-plans/{plan_id}/detail/"))
         return data if isinstance(data, dict) else {}
+
+    # -- reports (the endpoints the report screens call) -----------------------
+
+    def _all_pages(self, path: str, key: str = "results") -> list:
+        out, page = [], 1
+        sep = "&" if "?" in path else "?"
+        while True:
+            data = self._data(self._get(f"{path}{sep}page={page}"))
+            block = data.get(key) if isinstance(data, dict) and key in data else data
+            if isinstance(block, dict):  # {count, page, total_pages, results}
+                out.extend(block.get("results") or [])
+                if page >= int(block.get("total_pages") or 1):
+                    return out
+            else:
+                out.extend(block or [])
+                return out
+            page += 1
+
+    def course_categories(self, program_id: str) -> list:
+        """Class Report filter pills: [{id, display_name, topic_categories:[{id}]}]."""
+        data = self._data(self._get(f"programs/{program_id}/course-categories/"))
+        return data if isinstance(data, list) else []
+
+    def module_report(self, class_id: str, topic_category_ids=None) -> dict:
+        """Class Report for one filter: {'summary': {...}, 'students': [rows]}.
+        No ids = the All pill (`topic_category=all`)."""
+        ids = list(topic_category_ids or []) or ["all"]
+        query = "&".join(f"topic_category={i}" for i in ids)
+        path = f"classes/{class_id}/module-report/?{query}"
+        first = self._data(self._get(f"{path}&page=1"))
+        return {"summary": first.get("summary") or {},
+                "students": self._all_pages(path, key="students")}
+
+    def class_students(self, class_id: str) -> list:
+        return self._all_pages(f"classes/{class_id}/students/")
+
+    def course_report(self, class_id: str, student_id: str) -> dict:
+        """Student Report: {'courses': [...], 'topics': [every topic]}."""
+        path = f"classes/{class_id}/students/{student_id}/course-report/?course_id=all"
+        first = self._data(self._get(f"{path}&page=1"))
+        return {"courses": first.get("courses") or [],
+                "topics": self._all_pages(path, key="topics")}
+
+    def monthly_stars(self, class_id: str, month: int) -> list:
+        """Star Arena rows for a class and month (1-12): [{student_name, stars}]."""
+        data = self._data(self._get(f"classes/{class_id}/monthly-stars/{month}/?page_size=200"))
+        rows = data.get("results") if isinstance(data, dict) else data
+        return rows or []
+
+    def class_tests(self, class_id: str) -> list:
+        """The class's test assessments: [{test_id, display_name}]."""
+        data = self._data(self._get(f"class-tests/{class_id}/tests/"))
+        return data if isinstance(data, list) else []
+
+    def completed_students(self, class_id: str, test_id: str) -> list:
+        """Students who finished a test (the Class Report TEST pill's COMPLETED)."""
+        data = self._data(self._get(f"test-assessments/{class_id}/{test_id}/completed-students/"))
+        rows = data.get("students") if isinstance(data, dict) else data
+        return rows or []
 
     # -- assessments ----------------------------------------------------------
 

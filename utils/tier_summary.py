@@ -63,6 +63,13 @@ DESCRIPTIONS = {
     "test_all_pdfs_load": "Every lesson PDF link loads",
     "test_all_videos_load": "Every lesson video link loads",
     "test_all_in_pdf_links_load": "Every link inside the PDFs loads",
+    "test_class_report_matches_backend": "Class Report tiles + student accuracy match the backend (every filter)",
+    "test_student_report_matches_backend": "Student Report accuracy / trophies / topics match the backend (every course)",
+    "test_star_arena_by_class_and_month": "Star Arena totals + every student's stars match the backend (each class, last 3 months)",
+    "test_test_report_generated_for_each_class": "Test Report generates for every class",
+    "test_lesson_pdf_opens_in_viewer": "A lesson PDF opens in the viewer",
+    "test_lesson_video_plays_seeks_and_all_languages": "A lesson video plays, seeks, and plays in every language",
+    "test_open_all_pdfs_and_videos_every_class": "Every PDF and video opens, in every class",
 }
 
 ICON = {"pass": "✅", "fail": "❌", "skip": "⏭️"}
