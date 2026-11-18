@@ -65,7 +65,11 @@ def test_home_shows_enrolment_counts(home):
     publish the seats still open (utils/school_enrolment.py)."""
     counts = home.enrolment_counts()
     assert counts, "home dashboard did not show the Registered/Remaining counts"
-    assert counts["registered"] + counts["remaining"] == counts["total"], (
-        f"counts do not add up to the total strength: {counts}"
+    # Remaining is the seats left, floored at zero: a school can register more
+    # students than its licensed strength (Samskruthi: 368 of 348), and then the
+    # card correctly shows Remaining 0 rather than a negative number.
+    expected_remaining = max(counts["total"] - counts["registered"], 0)
+    assert counts["remaining"] == expected_remaining, (
+        f"Remaining should be max(total - registered, 0) = {expected_remaining}: {counts}"
     )
     school_enrolment.capture(counts)
