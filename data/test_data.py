@@ -191,10 +191,12 @@ ASSESSMENT_ACTION_FOR_STATUS = {
     "locked": Text.LESSON_START,
     "unlocked": Text.LESSON_STOP,
     "completed": Text.LESSON_RESTART,
+    "In Progress": Text.LESSON_STOP,  # v2.5.4: a lesson in progress offers STOP
 }
 ASSESSMENT_STATUS_FOR_ACTION = {v: k for k, v in ASSESSMENT_ACTION_FOR_STATUS.items()}
 ASSESSMENT_STATUS_AFTER_ACTION = {
     Text.LESSON_START: "unlocked",
     Text.LESSON_STOP: "completed",
     Text.LESSON_RESTART: "unlocked",
+    Text.LESSON_STOP: "completed"  # v2.5.4: a lesson in progress offers STOP
 }
