@@ -29,7 +29,7 @@ env:
   # ES account on the Gujarat backend (EsTeacherApp in the remote config).
   SCHOOL_SEARCH: "24071203646"
   SCHOOL_NAME: "24071203646-INDIRANAGAR PUBLIC SCHOOL"
-  TEACHER_MOBILE: "6326326326"
+  TEACHER_MOBILE: "8282828181"
   API_CONFIG_APP: EsTeacherApp
   API_PROD_URL: https://eg-360-gujarat-api-yaejwhx6ca-el.a.run.app
   REPORT_TITLE: ES Teacher Web QA
