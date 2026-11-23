@@ -15,12 +15,12 @@ import config.settings  # noqa: F401  (loads .env)
 
 # The one school every test logs into. SCHOOL_SEARCH is what we type into the
 # picker's search box; SCHOOL_NAME is the exact list row we click.
-SCHOOL_SEARCH = "Tirumala"
-SCHOOL_NAME = "Tirumala Torredu"
+SCHOOL_SEARCH = "Gouthams"
+SCHOOL_NAME = "Gouthams High School NKG - Nalgonda"
 
 # Teacher used for login. This number is already enrolled at Sanskruthi; the
 # login-or-register flow enrols it via the license code below if that changes.
-TEACHER_MOBILE = "9000000002"
+TEACHER_MOBILE = "9000000003"
 TEACHER_NAME = "QA Automation"
 TEACHER_LANGUAGE = "English"
 
@@ -50,7 +50,7 @@ LANGUAGE_ORDER = [
 ASSESSMENT_CLASS = os.getenv("ASSESSMENT_CLASS", "Class 1")
 
 # License code for Sanskruthi School - Nalgonda (used by the REGISTER flow).
-LICENSE_CODE = "URMT14"
+LICENSE_CODE = "UHGT35"
 
 # Same shape as a real code (4 letters + 2 digits) but assigned to no school:
 # `schools/?license_code=QAZX97&app=teacher` answers 404 "School not found."
