@@ -51,4 +51,4 @@ SCREENSHOTS_DIR = REPORTS_DIR / "screenshots"
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "").strip()
 APP_VERSION_OVERRIDE = os.getenv("APP_VERSION", "").strip()
 # Report title prefix; the ES Teacher web run sets "ES Teacher Web QA".
-REPORT_TITLE = os.getenv("REPORT_TITLE", "").strip() or "Teacher Web QA"
+REPORT_TITLE = os.getenv("REPORT_TITLE", "").strip() or "EG Teacher Web QA"

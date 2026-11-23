@@ -1,4 +1,4 @@
-name: Sanity / Smoke / Regression (web portal)
+name: EG Teacher Web - Sanity / Smoke / Regression
 
 # Runs the three test tiers in order against the live teacher portal, then posts
 # ONE Slack message listing every test each tier ran with its own pass/fail,
