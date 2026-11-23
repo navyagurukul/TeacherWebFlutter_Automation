@@ -7,6 +7,8 @@ submit signs them straight into the TeacherShell.
 """
 from __future__ import annotations
 
+import time
+
 from data.test_data import LANGUAGE_ORDER, TEACHER_LANGUAGE, Text
 from pages.base_page import BasePage
 from pages.home_page import HomePage
@@ -26,6 +28,18 @@ class LicenseDialog(BasePage):
         self.type_first_visible_input(code)
         self.click_button(Text.LICENSE_CONTINUE)
         return self
+
+    def error_message(self, timeout: int = 20) -> str | None:
+        """The rejection shown under the field after CONTINUE, or None.
+
+        The dialog stays open and puts the backend's message in the field's
+        errorText, so either known copy counts."""
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            for message in (Text.LICENSE_NOT_FOUND, Text.LICENSE_INVALID):
+                if self.is_visible(message, timeout=1):
+                    return message
+        return None
 
 
 class RegisterPage(BasePage):

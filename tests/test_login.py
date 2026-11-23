@@ -2,6 +2,7 @@
 import pytest
 
 from data.test_data import (
+    INVALID_LICENSE_CODE,
     INVALID_MOBILE_SHORT,
     SCHOOL_NAME,
     SCHOOL_SEARCH,
@@ -9,6 +10,7 @@ from data.test_data import (
     Text,
 )
 from pages.login_page import LoginPage
+from pages.register_page import LicenseDialog, RegisterPage
 from utils import app_version
 
 
@@ -110,4 +112,28 @@ def test_login_rejects_short_mobile(driver):
     login.click_login()
     assert login.validation_error_visible(Text.MOBILE_INVALID), (
         "Expected the 'Enter a valid 10-digit number' validation error"
+    )
+
+
+@pytest.mark.regression
+@pytest.mark.login
+def test_register_rejects_invalid_license_code(driver):
+    # A well-formed code (4 letters + 2 digits) that belongs to no school must
+    # be refused in the dialog: error under the field, dialog stays open, and
+    # the "Create your account" screen never appears.
+    login = LoginPage(driver)
+    login.enter_mobile(TEACHER_MOBILE)
+    login.click_register()
+
+    dialog = LicenseDialog(driver).wait_open()
+    dialog.enter_code_and_continue(INVALID_LICENSE_CODE)
+
+    message = dialog.error_message()
+    assert message, (
+        f"No error shown for invalid license code {INVALID_LICENSE_CODE!r} - "
+        f"expected {Text.LICENSE_NOT_FOUND!r} or {Text.LICENSE_INVALID!r}"
+    )
+    assert dialog.is_open(timeout=5), "License dialog closed after an invalid code"
+    assert not RegisterPage(driver).is_loaded(timeout=5), (
+        f"Invalid license code {INVALID_LICENSE_CODE!r} opened the register screen"
     )

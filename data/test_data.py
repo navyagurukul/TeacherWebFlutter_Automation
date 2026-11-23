@@ -52,6 +52,10 @@ ASSESSMENT_CLASS = os.getenv("ASSESSMENT_CLASS", "Class 1")
 # License code for Sanskruthi School - Nalgonda (used by the REGISTER flow).
 LICENSE_CODE = "SANK48"
 
+# Same shape as a real code (4 letters + 2 digits) but assigned to no school:
+# `schools/?license_code=QAZX97&app=teacher` answers 404 "School not found."
+INVALID_LICENSE_CODE = "QAZX97"
+
 # Inputs used by login validation tests.
 INVALID_MOBILE_SHORT = "12345"
 NON_DIGIT_MOBILE = "abcdefghij"
@@ -80,6 +84,11 @@ class Text:
     LICENSE_TITLE = "Enter License Code"
     LICENSE_CONTINUE = "CONTINUE"
     LICENSE_CANCEL = "CANCEL"
+    # Error shown under the field for an unknown code. The dialog prints the
+    # backend's message (404 -> "School not found."); "Invalid license code"
+    # is the app's own fallback when a 200 comes back with no school.
+    LICENSE_NOT_FOUND = "School not found."
+    LICENSE_INVALID = "Invalid license code"
 
     # Register screen ("Create your account").
     REGISTER_TITLE = "Create your account"
